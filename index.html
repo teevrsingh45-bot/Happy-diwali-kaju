@@ -1,0 +1,690 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tanu's Magical Diwali World ❤️</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;overflow:hidden;
+ background:#09051d;
+ font-family:Arial,sans-serif;
+ color:white;
+}
+#world{position:fixed;inset:0}
+canvas{display:block}
+
+#intro{
+ position:fixed;inset:0;z-index:5;
+ display:flex;align-items:center;
+ justify-content:center;text-align:center;
+ padding:20px;
+ background:linear-gradient(145deg,#17052e,#59104d,#b43c22);
+ transition:opacity 1s;
+}
+.intro-card{
+ max-width:430px;width:100%;
+ padding:30px 20px;
+ border:1px solid gold;
+ border-radius:25px;
+ background:#ffffff13;
+ box-shadow:0 0 35px #ffb52e;
+}
+h1{color:#ffe18b;text-shadow:0 0 15px orange}
+.intro-card p{line-height:1.8}
+button{
+ border:0;border-radius:25px;
+ background:linear-gradient(45deg,#ffb52e,#ffe99a);
+ color:#42132d;padding:12px 19px;
+ font-size:14px;font-weight:bold;
+ cursor:pointer;margin:5px;
+}
+#hud{
+ position:fixed;top:12px;left:0;right:0;
+ text-align:center;z-index:3;
+ pointer-events:none;
+}
+#hud h2{
+ color:#ffe18b;
+ text-shadow:0 0 15px orange;
+ font-size:23px;margin:5px;
+}
+#hud p{font-size:12px;margin:5px}
+#controls{
+ position:fixed;bottom:15px;left:0;right:0;
+ display:flex;justify-content:center;
+ flex-wrap:wrap;z-index:4;gap:4px;
+}
+#controls button{padding:11px 13px}
+#letter{
+ display:none;position:fixed;inset:0;
+ z-index:8;background:#08051deF;
+ align-items:center;justify-content:center;
+ padding:20px;text-align:center;
+}
+.letter-card{
+ max-width:430px;width:100%;
+ background:linear-gradient(145deg,#62134f,#291039);
+ border:2px solid gold;border-radius:25px;
+ padding:25px;box-shadow:0 0 35px gold;
+}
+.letter-card p{line-height:1.8}
+#loading{
+ position:fixed;inset:0;z-index:10;
+ background:#100520;display:flex;
+ justify-content:center;align-items:center;
+ color:gold;font-size:20px;
+}
+@media(max-width:500px){
+ #hud h2{font-size:19px}
+ #controls button{font-size:11px;padding:10px}
+}
+</style>
+</head>
+
+<body>
+
+<div id="loading">✨ Creating Tanu's Diwali World...</div>
+<div id="world"></div>
+
+<div id="intro">
+ <div class="intro-card">
+  <div style="font-size:55px">🪔✨🪔</div>
+  <h1>Happy Diwali Tanu ❤️</h1>
+  <p>
+   Welcome to your magical Diwali world!
+   A little world full of lights, happiness,
+   love and beautiful memories. 🥹
+  </p>
+  <div style="font-size:35px">🎆🏡🎇</div>
+  <button onclick="enterWorld()">ENTER YOUR WORLD ✨</button>
+ </div>
+</div>
+
+<div id="hud">
+ <h2>🪔 Tanu's Magical Diwali 🪔</h2>
+ <p>A little world made with lots of love ❤️</p>
+</div>
+
+<div id="controls">
+ <button onclick="viewStreet()">🏘️ City</button>
+ <button onclick="viewHome()">🏡 Home</button>
+ <button onclick="fireworks()">🎆 Fireworks</button>
+ <button onclick="showLetter()">💌 Letter</button>
+ <button onclick="toggleMusic()">🎵 Music</button>
+</div>
+
+<div id="letter">
+ <div class="letter-card">
+  <div style="font-size:45px">❤️🪔❤️</div>
+  <h1>Dear Tanu!</h1>
+  <p>
+   Happy Diwali, my sweet sister! 🥹❤️
+   <br><br>
+   May your life always shine brighter
+   than all the lights in this beautiful world.
+   May every diya bring happiness,
+   every prayer bring blessings,
+   and every dream become reality.
+   <br><br>
+   You are a very special part of my life.
+   Keep smiling, keep shining and never
+   stop being the wonderful person you are.
+   <br><br>
+   Thank you for being my sister.
+   I wish you endless happiness and love.
+   <br><br>
+   Love you so much Tanu! 🫂😘
+   <br><br>
+   Forever Special ♾️❤️
+  </p>
+  <button onclick="closeLetter()">CLOSE ❤️</button>
+ </div>
+</div>
+
+<script type="importmap">
+{
+ "imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+ }
+}
+</script>
+
+<script type="module">
+import * as THREE from "three";
+import {OrbitControls} from "three/addons/controls/OrbitControls.js";
+
+let scene,camera,renderer,controls;
+let fireworksParticles=[];
+let fireworkObjects=[];
+let started=false;
+let musicOn=false;
+let audioCtx=null;
+
+const world=document.getElementById("world");
+
+scene=new THREE.Scene();
+scene.background=new THREE.Color(0x100927);
+scene.fog=new THREE.Fog(0x100927,25,85);
+
+camera=new THREE.PerspectiveCamera(
+ 55,innerWidth/innerHeight,0.1,150
+);
+camera.position.set(0,7,13);
+
+renderer=new THREE.WebGLRenderer({
+ antialias:true
+});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.35;
+world.appendChild(renderer.domElement);
+
+controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;
+controls.enablePan=false;
+controls.minDistance=5;
+controls.maxDistance=25;
+controls.maxPolarAngle=Math.PI/2.05;
+controls.target.set(0,1,-3);
+
+scene.add(new THREE.AmbientLight(0xffffff,1.8));
+
+const moonLight=new THREE.DirectionalLight(0xffd9a0,2);
+moonLight.position.set(-8,15,8);
+moonLight.castShadow=true;
+scene.add(moonLight);
+
+const fillLight=new THREE.PointLight(0xff8b4d,45,40);
+fillLight.position.set(0,7,-3);
+scene.add(fillLight);
+
+function mat(color,emissive=0x000000){
+ return new THREE.MeshStandardMaterial({
+  color,
+  roughness:0.8,
+  emissive,
+  emissiveIntensity:1
+ });
+}
+
+function box(x,y,z,w,h,d,material){
+ const m=new THREE.Mesh(
+  new THREE.BoxGeometry(w,h,d),material
+ );
+ m.position.set(x,y,z);
+ m.castShadow=true;
+ m.receiveShadow=true;
+ scene.add(m);
+ return m;
+}
+
+function sphere(x,y,z,r,material){
+ const m=new THREE.Mesh(
+  new THREE.SphereGeometry(r,20,16),material
+ );
+ m.position.set(x,y,z);
+ m.castShadow=true;
+ scene.add(m);
+ return m;
+}
+
+// Ground
+box(0,-0.35,-12,25,0.5,45,mat(0x392b43));
+
+// Beautiful tiled street
+const road=box(0,-0.07,-12,5,0.08,45,mat(0x84616a));
+
+for(let z=-32;z<10;z+=1.3){
+ box(0,0,z,4.9,0.025,0.035,mat(0xc69a85));
+}
+for(let x=-2.3;x<=2.3;x+=0.8){
+ box(x,0.01,-12,0.025,0.025,45,mat(0xc69a85));
+}
+
+// Stars
+for(let i=0;i<180;i++){
+ const x=(Math.random()-.5)*70;
+ const y=5+Math.random()*23;
+ const z=-30-Math.random()*35;
+ sphere(x,y,z,0.045,mat(0xffffff,0xffffff));
+}
+
+// Moon
+sphere(-12,14,-28,2,mat(0xffdf9c,0xffc45e));
+
+// Houses
+const houseColors=[
+ 0xe46d65,0x7953c9,0xe59a42,
+ 0x3b9f9d,0xd65b83,0x598acb
+];
+
+function makeHouse(x,z,color){
+ const sign=Math.sign(x);
+ const base=new THREE.Color(color);
+
+ // Building
+ box(x,1.5,z,2.8,3,3.2,mat(base));
+
+ // Roof
+ const roof=new THREE.Mesh(
+  new THREE.ConeGeometry(2.25,1.5,4),
+  mat(0xb64b37)
+ );
+ roof.rotation.y=Math.PI/4;
+ roof.position.set(x,3.75,z);
+ roof.castShadow=true;
+ scene.add(roof);
+
+ // Front door
+ box(x-sign*1.43,0.9,z,0.09,1.8,0.85,mat(0x542a23));
+ sphere(x-sign*1.49,0.9,z+0.25,0.07,mat(0xffd85c));
+
+ // Windows
+ for(let zz of [z-0.95,z+0.95]){
+  box(x-sign*1.45,2.1,zz,0.09,0.8,0.7,mat(0xffdf79,0xffb91f));
+  box(x-sign*1.52,2.1,zz,0.04,0.9,0.06,mat(0x873e25));
+  box(x-sign*1.52,2.1,zz,0.04,0.06,0.8,mat(0x873e25));
+ }
+
+ // Balcony
+ box(x-sign*1.7,1.7,z,0.15,0.08,2.4,mat(0x422d39));
+ for(let zz=z-1;zz<=z+1.01;zz+=0.4){
+  box(x-sign*1.72,2,zz,0.07,0.6,0.07,mat(0xffd17a));
+ }
+
+ // Garlands
+ for(let i=0;i<7;i++){
+  sphere(
+   x-sign*1.55,
+   3.05-Math.sin(i/6*Math.PI)*0.35,
+   z-1.35+i*0.45,
+   0.11,
+   mat(i%2?0xffd64a:0xff753b)
+  );
+ }
+
+ // Roof lights
+ for(let i=0;i<9;i++){
+  sphere(
+   x-sign*1.48,3.15,z-1.4+i*0.35,
+   0.07,mat(0xffdc70,0xffbb22)
+  );
+ }
+}
+
+for(let i=0;i<8;i++){
+ let z=5-i*5;
+ makeHouse(-5.2,z,houseColors[i%6]);
+ makeHouse(5.2,z,houseColors[(i+2)%6]);
+}
+
+// Street lights
+for(let z=3;z>-32;z-=7){
+ for(let x of [-2.9,2.9]){
+  const pole=box(x,1.6,z,0.09,3.2,0.09,mat(0x393047));
+  sphere(x,3.35,z,0.22,mat(0xffdf86,0xffc23b));
+  const light=new THREE.PointLight(0xffa94b,5,7);
+  light.position.set(x,3.4,z);
+  scene.add(light);
+ }
+}
+
+// String lights above the street
+for(let z=4;z>-30;z-=5){
+ for(let i=0;i<11;i++){
+  let x=-4+i*.8;
+  let y=5-Math.sin(i/10*Math.PI)*1.0;
+  sphere(x,y,z,0.09,mat(
+   [0xffd44d,0xff8a42,0xff66a1][i%3],
+   [0xffd44d,0xff8a42,0xff66a1][i%3]
+  ));
+ }
+}
+
+// Diyas
+function diya(x,z){
+ const base=new THREE.Mesh(
+  new THREE.SphereGeometry(.3,16,12,0,Math.PI*2,0,Math.PI/2),
+  mat(0xc45b24)
+ );
+ base.scale.y=.5;
+ base.position.set(x,.15,z);
+ scene.add(base);
+
+ const flame=sphere(x,.36,z,.12,mat(0xffd33d,0xffae00));
+ flame.scale.y=1.8;
+
+ const light=new THREE.PointLight(0xffa52e,2,3);
+ light.position.set(x,.5,z);
+ scene.add(light);
+}
+
+for(let z=7;z>-34;z-=2.5){
+ diya(-2.45,z);
+ diya(2.45,z);
+}
+
+// Rangoli
+function rangoli(x,z){
+ for(let i=0;i<12;i++){
+  const a=i*Math.PI/6;
+  const p=sphere(
+   x+Math.cos(a)*.65,.04,
+   z+Math.sin(a)*.65,.17,
+   mat(i%2?0xffb52c:0xe75c9a)
+  );
+  p.scale.set(1,.25,1);
+ }
+ sphere(x,.08,z,.22,mat(0xffe58c));
+}
+rangoli(0,5);
+
+// 3D Cartoon Characters
+function character(x,z,shirt,hair,skirt){
+ const g=new THREE.Group();
+ g.position.set(x,0,z);
+ scene.add(g);
+
+ const skin=mat(0xffc69a);
+ const clothes=mat(shirt);
+ const hairMat=mat(hair);
+
+ // Legs
+ for(let side of [-1,1]){
+  const leg=new THREE.Mesh(
+   new THREE.CapsuleGeometry(.12,.5,4,8),
+   mat(0x392b54)
+  );
+  leg.position.set(side*.16,.52,0);
+  g.add(leg);
+
+  const shoe=new THREE.Mesh(
+   new THREE.SphereGeometry(.17,12,10),
+   mat(0x352132)
+  );
+  shoe.position.set(side*.16,.15,.1);
+  shoe.scale.set(1,.65,1.4);
+  g.add(shoe);
+ }
+
+ // Body
+ const body=new THREE.Mesh(
+  new THREE.CapsuleGeometry(.32,.65,5,12),
+  clothes
+ );
+ body.position.y=1.25;
+ g.add(body);
+
+ // Head
+ const head=sphere(0,2.25,0,.49,skin);
+ g.add(head);
+ scene.remove(head);
+
+ // Hair
+ const hairTop=new THREE.Mesh(
+  new THREE.SphereGeometry(.5,20,16),
+  hairMat
+ );
+ hairTop.scale.set(1.08,.75,1);
+ hairTop.position.set(0,2.52,-.02);
+ g.add(hairTop);
+
+ // Front fringe
+ for(let i=-1;i<=1;i++){
+  const fringe=sphere(i*.19,2.35,.39,.16,hairMat);
+  fringe.scale.set(1,.8,.6);
+  g.add(fringe);
+ }
+
+ // Eyes
+ for(let i of [-1,1]){
+  const eye=sphere(i*.17,2.27,.45,.055,mat(0x241528));
+  g.add(eye);
+  const shine=sphere(i*.17+.018,2.3,.5,.018,mat(0xffffff));
+  g.add(shine);
+ }
+
+ // Smile
+ const smile=new THREE.Mesh(
+  new THREE.TorusGeometry(.105,.018,6,16,Math.PI),
+  mat(0x963f47)
+ );
+ smile.position.set(0,2.1,.48);
+ smile.rotation.z=Math.PI;
+ g.add(smile);
+
+ // Arms
+ for(let i of [-1,1]){
+  const arm=new THREE.Mesh(
+   new THREE.CapsuleGeometry(.105,.52,4,8),
+   clothes
+  );
+  arm.position.set(i*.4,1.35,0);
+  arm.rotation.z=i*.35;
+  g.add(arm);
+
+  const hand=sphere(i*.48,.98,.04,.12,skin);
+  g.add(hand);
+ }
+
+ // Festive decoration
+ if(skirt){
+  const dress=new THREE.Mesh(
+   new THREE.ConeGeometry(.48,.75,12),
+   mat(skirt)
+  );
+  dress.position.y=.95;
+  g.add(dress);
+ }
+
+ // Floating name tag
+ const tag=sphere(0,3.05,0,.08,mat(0xffd76a,0xffbd38));
+ g.add(tag);
+
+ return g;
+}
+
+const brother=character(-.65,2,0x5796e5,0x25172a);
+const sister=character(.65,2,0xf28a42,0x21152c,0xf15b9a);
+
+// Cute bunny
+const bunny=new THREE.Group();
+bunny.position.set(1.55,0,3);
+scene.add(bunny);
+const white=mat(0xffffff);
+const bunnyBody=new THREE.Mesh(
+ new THREE.SphereGeometry(.25,16,12),white
+);
+bunnyBody.position.y=.35;
+bunny.add(bunnyBody);
+const bunnyHead=new THREE.Mesh(
+ new THREE.SphereGeometry(.2,16,12),white
+);
+bunnyHead.position.set(0,.7,.05);
+bunny.add(bunnyHead);
+for(let x of [-.1,.1]){
+ const ear=new THREE.Mesh(
+  new THREE.CapsuleGeometry(.055,.3,4,8),white
+ );
+ ear.position.set(x,.99,0);
+ ear.rotation.z=x*2;
+ bunny.add(ear);
+ const eye=sphere(x*.7,.72,.23,.025,mat(0x221522));
+ bunny.add(eye);
+}
+
+// Fireworks
+function burst(x,y,z){
+ const count=100;
+ const positions=[];
+ const velocities=[];
+
+ for(let i=0;i<count;i++){
+  positions.push(x,y,z);
+  const a=Math.random()*Math.PI*2;
+  const b=Math.random()*Math.PI;
+  const speed=2+Math.random()*5;
+  velocities.push(
+   Math.sin(b)*Math.cos(a)*speed,
+   Math.cos(b)*speed,
+   Math.sin(b)*Math.sin(a)*speed
+  );
+ }
+
+ const geometry=new THREE.BufferGeometry();
+ geometry.setAttribute(
+  "position",
+  new THREE.Float32BufferAttribute(positions,3)
+ );
+
+ const colors=[0xffb52d,0xff56a8,0x66ddff,0xffffff];
+ const color=colors[Math.floor(Math.random()*colors.length)];
+
+ const material=new THREE.PointsMaterial({
+  color,size:.13,transparent:true,opacity:1,
+  blending:THREE.AdditiveBlending
+ });
+
+ const particles=new THREE.Points(geometry,material);
+ scene.add(particles);
+
+ fireworksParticles.push({
+  particles,velocities,age:0
+ });
+}
+
+function updateFireworks(dt){
+ for(let i=fireworksParticles.length-1;i>=0;i--){
+  const f=fireworksParticles[i];
+  f.age+=dt;
+  const arr=f.particles.geometry.attributes.position.array;
+
+  for(let j=0;j<arr.length;j+=3){
+   arr[j]+=f.velocities[j/3*3]*dt;
+   arr[j+1]+=f.velocities[j/3*3+1]*dt;
+   arr[j+2]+=f.velocities[j/3*3+2]*dt;
+   f.velocities[j/3*3+1]-=3*dt;
+  }
+
+  f.particles.geometry.attributes.position.needsUpdate=true;
+  f.particles.material.opacity=Math.max(0,1-f.age/2);
+
+  if(f.age>2){
+   scene.remove(f.particles);
+   f.particles.geometry.dispose();
+   f.particles.material.dispose();
+   fireworksParticles.splice(i,1);
+  }
+ }
+}
+
+// Buttons
+window.enterWorld=function(){
+ document.getElementById("intro").style.opacity="0";
+ setTimeout(()=>{
+  document.getElementById("intro").style.display="none";
+ },1000);
+ started=true;
+ burst(-3,7,-10);
+ burst(3,8,-12);
+};
+
+window.viewStreet=function(){
+ controls.target.set(0,1,-9);
+ camera.position.set(0,8,12);
+};
+
+window.viewHome=function(){
+ controls.target.set(-5,2,0);
+ camera.position.set(0,5,9);
+};
+
+window.fireworks=function(){
+ for(let i=0;i<5;i++){
+  burst((Math.random()-.5)*16,7+Math.random()*7,-10-Math.random()*12);
+ }
+};
+
+window.showLetter=function(){
+ document.getElementById("letter").style.display="flex";
+};
+
+window.closeLetter=function(){
+ document.getElementById("letter").style.display="none";
+};
+
+window.toggleMusic=function(){
+ if(!audioCtx){
+  audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+ }
+ if(audioCtx.state==="suspended")audioCtx.resume();
+ musicOn=!musicOn;
+ if(musicOn){
+  playBell();
+  window.musicTimer=setInterval(playBell,1200);
+ }else{
+  clearInterval(window.musicTimer);
+ }
+};
+
+function playBell(){
+ if(!audioCtx)return;
+ const osc=audioCtx.createOscillator();
+ const gain=audioCtx.createGain();
+ osc.type="sine";
+ osc.frequency.value=880;
+ gain.gain.setValueAtTime(.0001,audioCtx.currentTime);
+ gain.gain.exponentialRampToValueAtTime(.12,audioCtx.currentTime+.03);
+ gain.gain.exponentialRampToValueAtTime(.0001,audioCtx.currentTime+.8);
+ osc.connect(gain);
+ gain.connect(audioCtx.destination);
+ osc.start();
+ osc.stop(audioCtx.currentTime+.85);
+}
+
+// Animation
+const clock=new THREE.Clock();
+let autoFire=0;
+
+function animate(){
+ requestAnimationFrame(animate);
+ const dt=Math.min(clock.getDelta(),.04);
+ const t=clock.elapsedTime;
+
+ brother.position.y=Math.sin(t*2)*.035;
+ sister.position.y=Math.sin(t*2+1)*.035;
+ bunny.position.y=Math.abs(Math.sin(t*3))*.08;
+
+ fillLight.intensity=40+Math.sin(t*2)*8;
+
+ updateFireworks(dt);
+
+ autoFire+=dt;
+ if(started && autoFire>3){
+  autoFire=0;
+  burst((Math.random()-.5)*12,7+Math.random()*5,-14-Math.random()*10);
+ }
+
+ controls.update();
+ renderer.render(scene,camera);
+}
+
+animate();
+
+window.addEventListener("resize",()=>{
+ camera.aspect=innerWidth/innerHeight;
+ camera.updateProjectionMatrix();
+ renderer.setSize(innerWidth,innerHeight);
+});
+document.getElementById("loading").style.display="none";
+</script>
+</body>
+</html>
